@@ -1,0 +1,114 @@
+# IDE and Editor
+.vscode/
+.idea/
+*.iml
+*.ipr
+*.iws
+*.swp
+*.swo
+*~
+.atom/
+.settings/
+.project
+.classpath
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Build and artifacts
+build/
+.build/
+dist/
+*.egg-info/
+__pycache__/
+*.pyc
+*.pyo
+*.class
+*.jar
+*.log
+.gradle/
+.cmake/
+
+# Firebase (SENSITIVE - Do NOT commit)
+serviceAccountKey.json
+.firebaserc
+firebase-debug.log
+
+# Environment variables (SENSITIVE - Do NOT commit)
+.env
+.env.local
+.env.*.local
+.env.production.local
+.env.test.local
+
+# Python
+venv/
+env/
+ENV/
+.venv
+*.egg
+*.eggs
+dist/
+build/
+.pytest_cache/
+.hypothesis/
+.coverage
+htmlcov/
+.tox/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Flutter
+.dart_tool/
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/coverage/
+pubspec.lock
+app/build/
+app/.dart_tool/
+
+# Android
+/android/app/debug
+/android/app/profile
+/android/app/release
+local.properties
+.gradle/
+*.apk
+*.aab
+
+# iOS
+/ios/Flutter/.last_build_id
+/ios/Flutter/Flutter.framework
+/ios/Flutter/Flutter.podspec
+
+# Generated files
+*.g.dart
+*.config.dart
+*.freezed.dart
+
+# Node (if any JS modules)
+node_modules/
+npm-debug.log
+yarn-error.log
+package-lock.json
+
+# Temporary files
+*.tmp
+*.bak
+*.backup
+*.swp
+.DS_Store
+
+# IDE artifacts
+.kiro/
+
+# Test coverage
+.coverage/
+coverage/

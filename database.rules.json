@@ -1,0 +1,8 @@
+{
+  "rules": {
+    "missions": {
+      ".read": true,
+      ".write": true
+    }
+  }
+}

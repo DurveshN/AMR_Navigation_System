@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+firebase-admin
+numpy
+hypothesis
+pytest
+python-dotenv==1.0.1
