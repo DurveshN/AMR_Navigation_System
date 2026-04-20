@@ -108,20 +108,20 @@ class MissionController extends StateNotifier<MissionState> {
   /// data from a previous session. Load MapConfig from the API (fast, local
   /// network) and also write it to Firebase so the simulator can read it.
   Future<void> initialize() async {
+    debugPrint('[MissionController] initialize: starting');
     state = state.copyWith(isLoading: true, errorMessage: null);
     try {
-      // Always generate a fresh mission ID on app start so we don't inherit
-      // stale path/feedback data from a previous run.
       final missionId =
           'mission_${DateTime.now().millisecondsSinceEpoch}';
       await _firebase.setCurrentMissionId(missionId);
+      debugPrint('[MissionController] initialize: missionId=$missionId');
 
-      // Load MapConfig from the FastAPI backend first (most reliable source).
-      // Fall back to Firebase if the backend is unreachable.
       MapConfig? mapConfig;
       try {
         mapConfig = await _api.getMapConfig();
-      } catch (_) {
+        debugPrint('[MissionController] initialize: got mapConfig from API');
+      } catch (e) {
+        debugPrint('[MissionController] initialize: API failed ($e), trying Firebase');
         mapConfig = await _firebase.getMapConfig(missionId);
       }
 
@@ -142,7 +142,10 @@ class MissionController extends StateNotifier<MissionState> {
         isLoading: false,
         errorMessage: null,
       );
+      debugPrint('[MissionController] initialize: SUCCESS — phase=${state.phase}, '
+          'transformer=${state.transformer != null}, missionId=${state.missionId}');
     } catch (e) {
+      debugPrint('[MissionController] initialize: FAILED — $e');
       state = state.copyWith(
         isLoading: false,
         phase: MissionPhase.idle,
@@ -154,7 +157,12 @@ class MissionController extends StateNotifier<MissionState> {
   void onMapTap(Offset pixelPos, Size imageSize) {
     final transformer = state.transformer;
     final missionId = state.missionId;
-    if (transformer == null || missionId == null) return;
+    debugPrint('[MissionController] onMapTap: phase=${state.phase}, '
+        'transformer=${transformer != null}, missionId=$missionId');
+    if (transformer == null || missionId == null) {
+      debugPrint('[MissionController] onMapTap: EARLY RETURN — transformer or missionId is null');
+      return;
+    }
 
     final (wx, wy) = transformer.pixelToWorld(
       pixelPos.dx,
@@ -162,13 +170,12 @@ class MissionController extends StateNotifier<MissionState> {
       imageSize.width,
       imageSize.height,
     );
+    debugPrint('[MissionController] onMapTap: pixel=$pixelPos → world=($wx, $wy)');
 
     if (state.phase == MissionPhase.selectStart) {
+      debugPrint('[MissionController] onMapTap: setting START, transitioning to selectGoal');
       _firebase.writeWaypoint(missionId, 'start', wx, wy);
-      state = MissionState(
-        mapConfig: state.mapConfig,
-        transformer: state.transformer,
-        missionId: state.missionId,
+      state = state.copyWith(
         startPixel: pixelPos,
         startWx: wx,
         startWy: wy,

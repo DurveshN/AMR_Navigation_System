@@ -17,7 +17,7 @@ class PlanPathException implements Exception {
 /// - Physical Android device: use your PC's LAN IP (same WiFi network).
 /// - Android emulator: use 10.0.2.2 (maps to host machine).
 /// - Desktop/web: use localhost.
-const String kBackendBaseUrl = 'http://192.168.1.7:8000';
+const String kBackendBaseUrl = 'http://192.168.1.6:8000';
 
 class ApiClient {
   final Dio _dio;

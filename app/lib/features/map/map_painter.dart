@@ -95,6 +95,9 @@ class MapPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(MapPainter old) {
-    return old.currentStep != currentStep || old.pathSteps != pathSteps;
+    return old.currentStep != currentStep ||
+        old.pathSteps != pathSteps ||
+        old.startPixel != startPixel ||
+        old.goalPixel != goalPixel;
   }
 }

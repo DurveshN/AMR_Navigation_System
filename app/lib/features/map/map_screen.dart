@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import '../../models/mission.dart';
 import 'map_painter.dart';
 import 'mission_controller.dart';
@@ -14,8 +13,6 @@ class MapScreen extends ConsumerStatefulWidget {
 }
 
 class _MapScreenState extends ConsumerState<MapScreen> {
-  bool _svgFailed = false;
-
   @override
   void initState() {
     super.initState();
@@ -25,6 +22,8 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   }
 
   void _handleTap(TapDownDetails details, Size imageSize) {
+    debugPrint('[MapScreen] _handleTap at ${details.localPosition}, '
+        'imageSize=$imageSize');
     ref
         .read(missionControllerProvider.notifier)
         .onMapTap(details.localPosition, imageSize);
@@ -67,8 +66,11 @@ class _MapScreenState extends ConsumerState<MapScreen> {
   @override
   Widget build(BuildContext context) {
     final missionState = ref.watch(missionControllerProvider);
+    debugPrint('[MapScreen] build: phase=${missionState.phase}, '
+        'isLoading=${missionState.isLoading}, '
+        'transformer=${missionState.transformer != null}, '
+        'error=${missionState.errorMessage}');
 
-    // Show SnackBar on new errors
     ref.listen<MissionState>(missionControllerProvider, (prev, next) {
       if (next.errorMessage != null &&
           next.errorMessage != prev?.errorMessage) {
@@ -104,7 +106,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
       appBar: AppBar(
         title: const Text('AMR Navigation'),
         actions: [
-          // Phase chip — always visible
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 8.0),
             child: Chip(
@@ -115,7 +116,6 @@ class _MapScreenState extends ConsumerState<MapScreen> {
               backgroundColor: _phaseColor(missionState.phase),
             ),
           ),
-          // New Mission button after completion or on error
           if (missionState.phase == MissionPhase.complete ||
               (missionState.errorMessage != null &&
                   missionState.phase == MissionPhase.idle))
@@ -127,126 +127,102 @@ class _MapScreenState extends ConsumerState<MapScreen> {
             ),
         ],
       ),
-      body: Column(
-        children: [
-          // Error banner (persistent, visible even when map is loading)
-          if (missionState.errorMessage != null &&
-              missionState.phase == MissionPhase.idle)
-            MaterialBanner(
-              content: Text(
-                'Initialisation failed: ${missionState.errorMessage}',
-                style: const TextStyle(fontSize: 13),
-              ),
-              backgroundColor: Colors.red.shade100,
-              actions: [
-                TextButton(
-                  onPressed: () =>
-                      ref.read(missionControllerProvider.notifier).initialize(),
-                  child: const Text('RETRY'),
-                ),
-              ],
-            ),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          debugPrint('[MapScreen] constraints: '
+              '${constraints.maxWidth}x${constraints.maxHeight}');
+          final imageSize = Size(constraints.maxWidth, constraints.maxHeight);
 
-          // Map area
-          Expanded(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final imageSize = Size(
-                  constraints.maxWidth,
-                  constraints.maxHeight,
-                );
-
-                return GestureDetector(
-                  // Always attach the detector; onMapTap guards phase internally
-                  onTapDown: (details) =>
-                      _handleTap(details, imageSize),
-                  child: Stack(
-                    children: [
-                      // ── Layer 1: Map image (always shown) ──────────────
-                      Positioned.fill(
-                        child: _svgFailed
-                            ? Image.asset(
-                                'assets/map_fallback.png',
-                                fit: BoxFit.contain,
-                              )
-                            : SvgPicture.asset(
-                                'assets/map.svg',
-                                fit: BoxFit.contain,
-                                placeholderBuilder: (_) => const Center(
-                                  child: CircularProgressIndicator(),
-                                ),
-                              ),
-                      ),
-
-                      // ── Layer 2: Path + markers (only when ready) ──────
-                      if (missionState.transformer != null)
-                        Positioned.fill(
-                          child: CustomPaint(
-                            painter: MapPainter(
-                              pathSteps: missionState.pathSteps,
-                              currentStep: currentStep,
-                              startPixel: missionState.startPixel,
-                              goalPixel: missionState.goalPixel,
-                              imageSize: imageSize,
-                              transformer: missionState.transformer!,
-                            ),
-                          ),
-                        ),
-
-                      // ── Layer 3: Robot icon ────────────────────────────
-                      if (missionState.transformer != null)
-                        RobotAnimator(
-                          currentStep: currentStep,
-                          pathSteps: missionState.pathSteps,
-                          imageSize: imageSize,
-                          feedback: missionState.feedback,
-                          transformer: missionState.transformer,
-                        ),
-
-                      // ── Layer 4: Tap hint overlay (only when tappable) ─
-                      if (isTappable)
-                        Positioned(
-                          bottom: 16,
-                          left: 0,
-                          right: 0,
-                          child: Center(
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: Colors.black54,
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                missionState.phase == MissionPhase.selectStart
-                                    ? 'Tap the map to set the START position'
-                                    : 'Tap the map to set the GOAL position',
-                                style: const TextStyle(
-                                    color: Colors.white, fontSize: 13),
-                              ),
-                            ),
-                          ),
-                        ),
-
-                      // ── Layer 5: Loading spinner (only during init/planning) ─
-                      if (missionState.isLoading)
-                        const Positioned.fill(
-                          child: ColoredBox(
-                            color: Color(0x55000000),
-                            child: Center(
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ),
-                    ],
+          return GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTapDown: (details) {
+              debugPrint(
+                  '[MapScreen] TAP DETECTED at ${details.localPosition}');
+              _handleTap(details, imageSize);
+            },
+            child: Container(
+              color: Colors.lightGreen,
+              child: Stack(
+                children: [
+                  // ── Layer 1: Map image ─────────────────────────────
+                  Positioned.fill(
+                    child: Image.asset(
+                      'assets/map_fallback.png',
+                      fit: BoxFit.contain,
+                    ),
                   ),
-                );
-              },
+
+                  // ── Layer 2: Path + markers ────────────────────────
+                  // (temporarily disabled to isolate rendering issue)
+
+                  // ── Layer 3: Robot icon ────────────────────────────
+                  // (temporarily disabled to isolate rendering issue)
+
+                  // ── Layer 4: Tap hint ──────────────────────────────
+                  if (isTappable)
+                    Positioned(
+                      bottom: 16,
+                      left: 0,
+                      right: 0,
+                      child: Center(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.black54,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Text(
+                            missionState.phase == MissionPhase.selectStart
+                                ? 'Tap the map to set the START position'
+                                : 'Tap the map to set the GOAL position',
+                            style: const TextStyle(
+                                color: Colors.white, fontSize: 13),
+                          ),
+                        ),
+                      ),
+                    ),
+
+                  // ── Layer 5: Loading overlay ───────────────────────
+                  if (missionState.isLoading)
+                    const Positioned.fill(
+                      child: ColoredBox(
+                        color: Color(0x55000000),
+                        child: Center(
+                          child: CircularProgressIndicator(
+                              color: Colors.white),
+                        ),
+                      ),
+                    ),
+
+                  // ── Error banner ───────────────────────────────────
+                  if (missionState.errorMessage != null &&
+                      missionState.phase == MissionPhase.idle)
+                    Positioned(
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      child: MaterialBanner(
+                        content: Text(
+                          'Init failed: ${missionState.errorMessage}',
+                          style: const TextStyle(fontSize: 13),
+                        ),
+                        backgroundColor: Colors.red.shade100,
+                        actions: [
+                          TextButton(
+                            onPressed: () => ref
+                                .read(missionControllerProvider.notifier)
+                                .initialize(),
+                            child: const Text('RETRY'),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
             ),
-          ),
-        ],
+          );
+        },
       ),
     );
   }
